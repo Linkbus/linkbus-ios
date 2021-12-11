@@ -6,6 +6,7 @@
 //  Copyright © 2019 Jean-Marc Boullianne. All rights reserved.
 //
 import SwiftUI
+import FontAwesome_swift
 
 struct AlertCard: View {
     
@@ -33,7 +34,9 @@ struct AlertCard: View {
             "blue": Color.blue,
             "green": Color.green,
             "yellow": Color.yellow,
-            "gray": Color.gray
+            "gray": Color.gray,
+            "pink": Color.pink,
+            "black": Color.black,
         ]
         
         // Use RGB when alertColor is empty
@@ -84,18 +87,49 @@ struct AlertCard: View {
                         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
                         self.routeController.changeDate(selectedDate: tomorrow)
                     }
+                    else if (action == "uber") {
+                        
+                    }
+                    else if (action == "lyft") {
+                        
+                    }
                     else {
                         self.showingActionSheet = true
                     }
                 },
                 label: {
-                    Text(alertText)
-                        .foregroundColor(.white)
+                    if (action == "uber") {
+                        Text("Order Uber")
+                            .foregroundColor(.white)
+                            .font(Font.custom("HelveticaNeue", size: 14))
+                        Text(String.fontAwesomeIcon(name: .uber))
+                            .foregroundColor(.white)
+                            .font(Font(UIFont.fontAwesome(ofSize: 16, style: .brands)))
+                    }
+                    else if (action == "lyft") {
+                        Text("Order")
+                            .foregroundColor(.white)
+                            .font(Font.custom("HelveticaNeue", size: 14))
+                        Text(String.fontAwesomeIcon(name: .lyft))
+                            .foregroundColor(.white)
+                            .font(Font(UIFont.fontAwesome(ofSize: 18, style: .brands)))
+                    }
+                    else {
+                        HStack() {
+                            Text(alertText)
+                                .foregroundColor(.white)
+                                .font(Font.custom("HelveticaNeue", size: 14))
+                            if (action.contains("http")) {
+                                Text(String.fontAwesomeIcon(name: .externalLinkAlt))
+                                    .foregroundColor(.white)
+                                    .font(Font(UIFont.fontAwesome(ofSize: 10, style: .solid)))
+                            }
+                        }
                         .padding(12)
-                        .font(Font.custom("HelveticaNeue", size: 14))
                         .frame(maxWidth: self.fullWidth ? .infinity : nil, alignment: .leading)
                         .background(alertColor)
                         .cornerRadius(15)
+                    }
                 })
                 .animation(.none)
             }

@@ -9,6 +9,10 @@
 import SwiftUI
 import PartialSheet
 import ActivityIndicatorView
+import PopupView
+import Logging
+
+private let logger = Logger(label: "com.michaelcarroll.Linkbus.Main")
 
 struct Home: View {
     
@@ -17,17 +21,19 @@ struct Home: View {
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
+    @State var popUpText = "Up to date"
     @State private var counter = 0
     @State var showOnboardingSheet = false
     @State var timeOfDay = "default"
     @State var menuBarTitle = "Linkbus"
     @State var initial = true
-    @State var lastRefreshTime = ""
+    @State var lastRefreshTimeString = ""
     @State var greeting = "Linkbus"
     
     @State var showingChangeDate = false
-    @State var showLoadingIndicator = true
     
+    @State var webRequestJustFinished = false
+    @State var lastRefreshTime = Date()
     
     var calendarButton: some View {
         //NavigationLink(destination: ChangeDate(routeController: self.routeController)) {
@@ -37,17 +43,18 @@ struct Home: View {
                 .accessibility(label: Text("Change Date"))
 //                .padding()
         }
-        
+        .disabled(routeController.deviceOnlineStatus == "offline")
         //}.navigationBarTitle("Choose date")
     }
     
     var loadingIndicator: some View {
-        ActivityIndicatorView(isVisible: $routeController.webRequestInProgress, type: .gradient([Color.white, Color.blue]))
-            .frame(width: 19, height: 19)
+        ActivityIndicatorView(isVisible: $routeController.webRequestIsSlow, type: .gradient([(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color(UIColor.systemBackground)), Color.blue]))
+            .frame(width: 18, height: 18)
     }
     
     // init removes seperator/dividers from list, in future maybe use scrollview
     init() {
+
         self.routeController = RouteController()
         //UINavigationBar.appearance().backgroundColor = .systemGroupedBackground // currently impossible to change background color with navigationview, in future swiftui use .systemGroupedBackground
         
@@ -64,15 +71,14 @@ struct Home: View {
         //        UITableViewCell.appearance().backgroundColor = .clear
         //        UINavigationBar.appearance().backgroundColor = (colorScheme == .dark ? .white : .black)
         //        print(colorScheme)
-        
-        let time = Date()
         let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH:mm"
-        //self.lastRefreshTime = timeFormatter.string(from: time)
-        _lastRefreshTime = State(initialValue: timeFormatter.string(from: time))
+        timeFormatter.dateFormat = "MM/dd/yyyy HH:mm"
+        let currentTime = timeFormatter.string(from: Date())
+        _lastRefreshTimeString = State(initialValue: currentTime)
     }
     
     var body: some View {
+        
         NavigationView {
             if #available(iOS 15.0, *) { // iOS 15
                 ScrollView {
@@ -88,6 +94,21 @@ struct Home: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         calendarButton
                     }
+                }
+                .popup(isPresented: $webRequestJustFinished, type: .toast, position: .top,
+                       animation: .spring(), autohideIn: 3, dragToDismiss: false, closeOnTap: true) {
+                    HStack(){
+                        Text("Up to date  🎉")
+                            .font(Font.custom("HelveticaNeue", size: 14))
+                    }
+                        .padding(10)
+                        //.background(Color.blue)
+                        //.foregroundColor(Color.white)
+                        .background(colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemBackground))
+                        .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
+                        .cornerRadius(18.0)
+                        .padding(50)
+                        .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
                 }
             }
             else if #available(iOS 14.0, *) { // iOS 14
@@ -106,6 +127,22 @@ struct Home: View {
                         calendarButton
                     }
                 }
+                .popup(isPresented: $webRequestJustFinished, type: .toast, position: .top,
+                       animation: .spring(), autohideIn: 3, dragToDismiss: false, closeOnTap: true) {
+                    HStack(){
+                        Text("Up to date  🎉")
+                            .font(Font.custom("HelveticaNeue", size: 14))
+                    }
+                    .padding(10)
+                    //.background(Color.blue)
+                    //.foregroundColor(Color.white)
+                    .background(colorScheme == .dark ? Color(UIColor.systemGray6) : Color(UIColor.systemBackground))
+                    .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(18.0)
+                    .padding(50)
+                    .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
+            }
+
             } else { // iOS 13
                 List {
                     AlertList(routeController: routeController)
@@ -116,7 +153,7 @@ struct Home: View {
                 .navigationBarTitle(self.menuBarTitle)
                 //.transition(.opacity)
                 //.background((colorScheme == .dark ? Color(UIColor.systemBackground) : Color(UIColor.systemGray6)))
-                .navigationBarItems(trailing: calendarButton)
+//                .navigationBarItems(trailing: calendarButton)
             }
             //                } else {
             //                    VStack() {
@@ -162,12 +199,10 @@ struct Home: View {
         // .hoverEffect(.lift)
         .onReceive(timer) { time in
             if self.counter >= 1 {
-                // Online Status
-                titleOnlineStatus(self: self, routeController: self.routeController)
                 // Greeting
                 titleGreeting(self: self)
-                // Date changed
-                titleDate(self: self, routeController: self.routeController)
+                // Title controller
+                titleController(self: self, routeController: self.routeController)
             }
             self.counter += 1
             // Auto refresh
@@ -177,6 +212,7 @@ struct Home: View {
         //                DateSheet(routeController: routeController)
         //            }
     }
+        
 }
 
 
@@ -192,24 +228,17 @@ struct Home: View {
 //    }
 //}
 
-func titleDate(self: Home, routeController: RouteController) {
-    if routeController.dateIsChanged {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
-        let formattedDate = formatter.string(from: routeController.selectedDate)
-        self.menuBarTitle = "⏭ " + formattedDate
-    }
-    else {
-        self.menuBarTitle = self.greeting
-    }
-}
-
-func titleOnlineStatus(self: Home, routeController: RouteController) {
-    // print("online status: " + routeController.deviceOnlineStatus)
+func titleController(self: Home, routeController: RouteController) {
     if routeController.deviceOnlineStatus == "offline" {
         self.menuBarTitle = "Offline"
     }
-    else if (routeController.deviceOnlineStatus == "online" || routeController.deviceOnlineStatus == "back online") {
+    else if routeController.dateIsChanged {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        let formattedDate = formatter.string(from: routeController.selectedDate)
+        self.menuBarTitle = formattedDate + " ⏭"
+    }
+    else {
         self.menuBarTitle = self.greeting
     }
 }
@@ -218,13 +247,16 @@ func titleGreeting(self: Home) {
     let currentDate = Date()
     let calendar = Calendar(identifier: .gregorian)
     let hour = calendar.component(.hour, from: currentDate)
-    let component = calendar.dateComponents([.weekday], from: currentDate)
+    let component = calendar.dateComponents([.hour, .minute, .month, .weekday, .day], from: currentDate)
     
     var newTimeOfDay: String
     var timeOfDayChanged = false
     
-    if (hour < 6) {
+    if (hour < 3) {
         newTimeOfDay = "night"
+    }
+    else if (hour < 6) {
+        newTimeOfDay = "late night"
     }
     else if (hour < 12) {
         newTimeOfDay = "morning"
@@ -242,6 +274,10 @@ func titleGreeting(self: Home) {
     
     if (timeOfDayChanged) {
         if (self.timeOfDay == "night") {
+            let nightGreetings = ["Goodnight 😴", "Buenas noches 😴", "Goodnight 😴", "Goodnight 🌌", "Goodnight 😴", "Goodnight 🌌", "Goodnight 🌌"]
+            let randomGreeting = nightGreetings.randomElement()
+            self.greeting = randomGreeting!
+        } else if (self.timeOfDay == "late night") {
             let nightGreetings = ["Goodnight 😴", "Buenas noches 😴", "Goodnight 😴", "Goodnight 🌌", "Goodnight 😴", "You up? 😏💤", "You up? 😏💤"]
             let randomGreeting = nightGreetings.randomElement()
             self.greeting = randomGreeting!
@@ -254,6 +290,21 @@ func titleGreeting(self: Home) {
                 let morningGreetings = ["Good morning 🌅", "Bonjour 🌅", "Happy Friday 🌅", "Happy Friday 🌅", "Happy Friday 🌅", "Good morning 🌅", "Good morning 🌅", "Good morning 🌅", "Buenos días 🌅"]
                 let randomGreeting = morningGreetings.randomElement()
                 self.greeting = randomGreeting!
+            } else if (component.month == 10) {
+                if (component.day == 31) {
+                    let morningGreetings = ["Good morning 🎃", "Good morning 🎃", "Good morning 🎃", "Good morning 👻"]
+                    let randomGreeting = morningGreetings.randomElement()
+                    self.greeting = randomGreeting!
+                }
+                else {
+                    let morningGreetings = ["Good morning 🌅", "Bonjour 🌅", "Buenos días 🌅", "Good morning 🍂", "Good morning 🍂", "Good morning 🍁"]
+                    let randomGreeting = morningGreetings.randomElement()
+                    self.greeting = randomGreeting!
+                }
+            } else if (component.month == 12 || component.month == 1) {
+                let morningGreetings = ["Good morning 🌅", "Bonjour 🌅", "Buenos días 🌅", "Good morning ❄️", "Good morning ❄️", "Good morning ❄️"]
+                let randomGreeting = morningGreetings.randomElement()
+                self.greeting = randomGreeting!
             } else {
                 let morningGreetings = ["Good morning 🌅", "Bonjour 🌅", "Good morning 🌅", "Good morning 🌅", "Good morning 🌅", "Buenos días 🌅"]
                 let randomGreeting = morningGreetings.randomElement()
@@ -261,7 +312,7 @@ func titleGreeting(self: Home) {
             }
         } else if (self.timeOfDay == "afternoon") {
             self.greeting = "Good afternoon ☀️"
-        } else if (self.timeOfDay == "evening") { // < 24 , self.timeOfDay = evening
+        } else if (self.timeOfDay == "evening") { // < 24
             let eveningGreetings = ["Good evening 🌙", "Good evening 🌙", "Good evening 🌙", "Good evening 🌙"]
             let randomGreeting = eveningGreetings.randomElement()
             self.greeting = randomGreeting!
@@ -277,11 +328,27 @@ func autoRefreshData(self: Home) {
     let currentTime = timeFormatter.string(from: time)
     //                print("last ref: " + self.lastRefreshTime)
     //                print("current time: " + currentTime)
-    //                print("local desc: " + routeController.localizedDescription)
-    if self.lastRefreshTime != currentTime {
-        print("Refreshing data")
+    //                print("local desc: " + routeController.localizedDescription
+    if self.routeController.initalWebRequestFinished && self.lastRefreshTimeString != currentTime {
+        logger.info("Refreshing data")
+        logger.info("Times changed: \(self.lastRefreshTimeString) != \(currentTime)")
+        
         self.routeController.webRequest()
-        self.lastRefreshTime = currentTime
+            // Wait for web request to finish
+            .notify(queue: .main) {
+                logger.info("webRequest finished")
+                let secondsSinceLastRefresh = Date().timeIntervalSince(self.lastRefreshTime)
+                logger.info("seconds since last refresh: \(secondsSinceLastRefresh)")
+                if secondsSinceLastRefresh > 120 { // only show popUp if seconds elapsed since lastRefreshTime > 120s (app in background - if app is in foreground this will always be ~60)
+                    if self.routeController.deviceOnlineStatus != "offline" {
+                        logger.info("Opening 'Up to date' popup")
+                        self.popUpText = "Up to date" // reset (remove emoji)
+                        self.webRequestJustFinished = true
+                    }
+                }
+                self.lastRefreshTime = time
+            }
+        self.lastRefreshTimeString = currentTime
     }
 }
 

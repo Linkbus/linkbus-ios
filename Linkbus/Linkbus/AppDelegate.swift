@@ -7,13 +7,52 @@ The application delegate.
 
 import UIKit
 import UserNotifications
+import Firebase
+import LoggingFormatAndPipe
+import Logging
+import DataDogLog
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
-        //registerForPushNotifications()
+//    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+//        // Override point for customization after application launch.
+//        //registerForPushNotifications()
+//        return true
+//    }
+    
+//    var window: UIWindow?
+
+    // Configure a FirebaseApp shared instance
+    func application(_ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions:
+            [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        FirebaseConfiguration.shared.setLoggerLevel(FirebaseLoggerLevel.error)
+        FirebaseApp.configure()
+        
+        
+        // Set up logger
+        // Logs to stdout and DataDog
+        let myDateFormat = DateFormatter()
+        myDateFormat.dateFormat = "[yyyy-MM-dd'T'HH:mm:ss,SSS]"
+        let myFormat = BasicFormatter(
+            [.timestamp, .level, .function, .message],
+            separator: " | ",
+            timestampFormatter: myDateFormat
+        )
+        LoggingSystem.bootstrap {
+            // initialize handler instance
+            let handlers:[LogHandler] = [
+                DataDogLogHandler(label: $0, key: "c4c27bb04ef1f456eaa31a60e47f6440",
+                                  hostname: UIDevice().identifierForVendor?.uuidString ?? "unknown"),
+                LoggingFormatAndPipe.Handler(
+                    formatter: myFormat,
+                    pipe: LoggerTextOutputStreamPipe.standardOutput
+                )
+            ]
+            return MultiplexLogHandler(handlers)
+        }
+        
         return true
     }
     
@@ -71,6 +110,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
               }
           }
       }
+    
+    
 
 }
 

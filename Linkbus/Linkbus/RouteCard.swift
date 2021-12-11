@@ -6,6 +6,7 @@
 //  Copyright © 2019 Jean-Marc Boullianne. All rights reserved.
 //
 import SwiftUI
+import FirebaseAnalytics
 
 struct RouteCard: View {
     
@@ -78,7 +79,6 @@ struct RouteCard: View {
                             else if (route.nextBusTimer.contains("Now")) {
                                 let delay = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { (delay) in
                                     self.timer = route.nextBusTimer
-                                    print("executed")
                                 }
                                 Text(timer)
                                     .font(Font.custom("HelveticaNeue", size: 13))
@@ -111,8 +111,8 @@ struct RouteCard: View {
                         }
                     }
                     
-                    .transition(.scale)
-                    .animation(.default)
+                    .transition(.scale) // unsure if these are needed since we are animating at RouteList root - seems to change animation if its disabled
+//                    .animation(.default)
                 }
                 .padding([.top, .bottom], 8)
                 
@@ -132,6 +132,7 @@ struct RouteCard: View {
         //.shadow(color: Color.black.opacity(0.2), radius: 7, x: 0, y: 2)
         .onTapGesture {
             self.showRouteSheet = true
+            Analytics.logEvent("RouteSelected", parameters: ["route_name": self.route.title])
         }
         .sheet(isPresented: $showRouteSheet) {
             RouteSheet(route: self.route, routeController: self.routeController)

@@ -1,0 +1,70 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "ActivityIndicatorView",
+        "repositoryURL": "https://github.com/exyte/ActivityIndicatorView",
+        "state": {
+          "branch": null,
+          "revision": "939cd272022c6d58ef34e36de0e96bd311e05e7d",
+          "version": "1.0.0"
+        }
+      },
+      {
+        "package": "PartialSheet",
+        "repositoryURL": "https://github.com/AndreaMiotto/PartialSheet",
+        "state": {
+          "branch": null,
+          "revision": "422d748bfb149b2af4b48e43b7b6197bd8a727c1",
+          "version": "2.1.14"
+        }
+      },
+      {
+        "package": "PopupView",
+        "repositoryURL": "https://github.com/exyte/PopupView",
+        "state": {
+          "branch": "master",
+          "revision": "0d37d6f94e0ec9b38ab43300213ad72d28af921f",
+          "version": null
+        }
+      },
+      {
+        "package": "swift-log",
+        "repositoryURL": "https://github.com/apple/swift-log.git",
+        "state": {
+          "branch": null,
+          "revision": "5d66f7ba25daf4f94100e7022febf3c75e37a6c7",
+          "version": "1.4.2"
+        }
+      },
+      {
+        "package": "swift-log-datadog",
+        "repositoryURL": "https://github.com/jagreenwood/swift-log-datadog.git",
+        "state": {
+          "branch": null,
+          "revision": "f2aed3f8cc1054e74e70a1fb2e6403b3cc799266",
+          "version": "0.2.0"
+        }
+      },
+      {
+        "package": "swift-log-format-and-pipe",
+        "repositoryURL": "https://github.com/Adorkable/swift-log-format-and-pipe.git",
+        "state": {
+          "branch": null,
+          "revision": "bd29badb9e6b18122ec10b84eed534db83cad279",
+          "version": "0.1.1"
+        }
+      },
+      {
+        "package": "SwiftSoup",
+        "repositoryURL": "https://github.com/scinfu/SwiftSoup",
+        "state": {
+          "branch": "master",
+          "revision": "02c63b7be50bda384f22c56c64d347231754a07e",
+          "version": null
+        }
+      }
+    ]
+  },
+  "version": 1
+}
