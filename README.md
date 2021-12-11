@@ -30,10 +30,6 @@
     <img src="https://img.shields.io/badge/Made_With-_SwiftUI-9cf.svg" alt="LICENSE">
   </a>
   <!-- Made with -->
-  <a href="https://vuejs.org/">
-    <img src="https://img.shields.io/badge/Made_with-Vue-blue.svg" alt="LICENSE">
-  </a>
-  <!-- Made with -->
   <a href="https://firebase.google.com/">
     <img src="https://img.shields.io/badge/Powered_by-Firebase_🔥-red.svg" alt="LICENSE">
   </a>
