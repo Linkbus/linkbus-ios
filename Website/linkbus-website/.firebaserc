@@ -1,6 +1,0 @@
-{
-  "projects": {
-    "default": "linkbus-website",
-    "production": "linkbus-website"
-  }
-}
