@@ -35,23 +35,18 @@
   </a>
   <br>
   <!-- GitHub contributors -->
-  <a href="https://GitHub.com/michaelcarroll/linkbus-ios/graphs/contributors/">
-    <img src="https://img.shields.io/github/contributors/michaelcarroll/linkbus-ios.svg" alt="">
+  <a href="https://github.com/linkbus/linkbus-ios/graphs/contributors/">
+    <img src="https://img.shields.io/github/contributors/linkbus/linkbus-ios.svg" alt="">
   </a>
   <!-- GitHub pull requests -->
-  <a href="https://GitHub.com/michaelcarroll/linkbus-ios/pull/">
-    <img src="https://img.shields.io/github/issues-pr/michaelcarroll/linkbus-ios.svg" alt="">
+  <a href="https://github.com/linkbus/linkbus-ios/pull/">
+    <img src="https://img.shields.io/github/issues-pr/linkbus/linkbus-ios.svg" alt="">
   </a>
   <!-- GitHub pull requests closed -->
-  <a href="https://GitHub.com/michaelcarroll/linkbus-ios/pull/">
-    <img src="https://img.shields.io/github/issues-pr-closed/michaelcarroll/linkbus-ios.svg" alt="">
+  <a href="https://github.com/linkbus/linkbus-ios/pull/">
+    <img src="https://img.shields.io/github/issues-pr-closed/linkbus/linkbus-ios.svg" alt="">
   </a>
 <br>
-
-  <!-- License -->
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-©_Michael_Carroll-red.svg" alt="LICENSE">
-  </a>
 </div>
 
  ---
@@ -60,4 +55,5 @@
 
 [iOS] Bus schedule application for the CSB/SJU campuses.
 
-Readme in progress..
+Download from the [App Store](https://apps.apple.com/us/app/linkbus/id1531257573)
+
