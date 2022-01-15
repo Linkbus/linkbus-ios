@@ -194,7 +194,7 @@ extension RouteController {
         return dispatchGroup
     }
     
-    func fetchCsbsjuApi(completionHandler: @escaping (BusSchedule?) -> Void, yesterdaysRoutes: Bool = false) {
+    func fetchCsbsjuApi(completionHandler: @escaping (BusSchedule?) -> Void, yesterdaysRoutes: Bool = false, tryAgain: Bool = true) {
         var urlString = CsbsjuApiUrl
         if self.dateIsChanged {
             // Format date object into string e.g. 10/23/20
@@ -213,59 +213,52 @@ extension RouteController {
         }
         logger.info("Linkbus API URL: \(urlString)")
         let url = URL(string: urlString)!
-        
-        var attempt_count = 0;
-        var error_occured = false;
-        while (attempt_count == 0 || (attempt_count == 1 && error_occured)) {
-            let task = URLSession(configuration:configuration).dataTask(with: url, completionHandler: { data, response, error in
-                if let error = error {
-                    error_occured = true;
-                    logger.info("Error with fetching bus schedule from CSBSJU API: \(error)")
-                    if attempt_count == 0 {
-                        logger.info("Trying again to fetch the bus schedule")
-                        return
-                    } else if attempt_count == 1 {
-                        DispatchQueue.main.async {
-                            self.localizedDescription = error.localizedDescription
-                            logger.info("Localized desc: \(self.localizedDescription)")
-                            self.deviceOnlineStatus = "offline"
-                            self.webRequestInProgress = false
-                            self.webRequestIsSlow = false
-                        }
-                        completionHandler(nil)
-                        return
-                    }
-                }
-                else {
+
+        let task = URLSession(configuration:configuration).dataTask(with: url, completionHandler: { data, response, error in
+            if let error = error {
+                logger.info("Error with fetching bus schedule from CSBSJU API: \(error)")
+                if tryAgain {
+                    logger.info("Trying again to fetch the bus schedule")
+                    self.fetchCsbsjuApi(completionHandler: completionHandler, yesterdaysRoutes: yesterdaysRoutes, tryAgain: false);
+                } else {
                     DispatchQueue.main.async {
-                        print("deviceOnlineStatus: " + self.deviceOnlineStatus)
-                        if self.deviceOnlineStatus == "offline" {
-                            self.deviceOnlineStatus = "back online"
-                        }
-                        self.localizedDescription = "no error"
-                    }
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode) else {
-                    logger.info("Error with the response, unexpected status code: \(String(describing: response))")
-                    DispatchQueue.main.async {
-                        self.csbsjuApiOnlineStatus = "CsbsjuApi invalid response"
+                        self.localizedDescription = error.localizedDescription
+                        logger.info("Localized desc: \(self.localizedDescription)")
+                        self.deviceOnlineStatus = "offline"
+                        self.webRequestInProgress = false
+                        self.webRequestIsSlow = false
                     }
                     completionHandler(nil)
-                    return
                 }
-                do {
-                    let apiResponse = try JSONDecoder().decode(BusSchedule.self, from: data!)
-                    completionHandler(apiResponse)
-                } catch {
-                    logger.info("Error decoding CSB/SJU API!")
-                    completionHandler(nil)
+                return
+            } else {
+                DispatchQueue.main.async {
+                    print("deviceOnlineStatus: " + self.deviceOnlineStatus)
+                    if self.deviceOnlineStatus == "offline" {
+                        self.deviceOnlineStatus = "back online"
+                    }
+                    self.localizedDescription = "no error"
                 }
-            })
-            task.resume()
-            attempt_count += 1
-        }
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                logger.info("Error with the response, unexpected status code: \(String(describing: response))")
+                DispatchQueue.main.async {
+                    self.csbsjuApiOnlineStatus = "CsbsjuApi invalid response"
+                }
+                completionHandler(nil)
+                return
+            }
+            do {
+                let apiResponse = try JSONDecoder().decode(BusSchedule.self, from: data!)
+                completionHandler(apiResponse)
+            } catch {
+                logger.info("Error decoding CSB/SJU API!")
+                completionHandler(nil)
+            }
+        })
+        task.resume()
     }
     
     /**
@@ -275,7 +268,7 @@ extension RouteController {
      
      - Returns: calls completion handler with bus message as argument or returns nill on error.
      */
-    func fetchBusMessage(completionHandler: @escaping ([String]?) -> Void) {
+    func fetchBusMessage(completionHandler: @escaping ([String]?) -> Void, tryAgain: Bool = true) {
         let url = URL(string: "https://apps.csbsju.edu/busschedule/default.aspx")
         // Create request
         var request = URLRequest(url: url!)
@@ -307,35 +300,30 @@ extension RouteController {
         request.setValue("Delta=true", forHTTPHeaderField: "X-MicrosoftAjax")
         request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
         request.setValue("Mozilla/5.0 (Android 8.0)", forHTTPHeaderField: "User-Agent")
-        var attempt_count = 0;
-        var error_occured = false;
-        while (attempt_count == 0 || (attempt_count == 1 && error_occured)) {
-            // Create url session to send request
-            let task = URLSession(configuration:configuration).dataTask(with: request, completionHandler: { (data, response, error) in
-                if let error = error {
-                    error_occured = true;
-                    logger.info("Error with fetching daily message: \(error)")
-                    if attempt_count == 0 {
-                        logger.info("Trying again to fetch the daily message")
-                        return
-                    } else if attempt_count == 1 {
-                        completionHandler(nil)
-                        return
-                    }
-                }
-                guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode) else {
-                    logger.info("Error with the response, unexpected status code: \(String(describing: response))")
+
+        // Create url session to send request
+        let task = URLSession(configuration:configuration).dataTask(with: request, completionHandler: { (data, response, error) in
+            if let error = error {
+                logger.info("Error with fetching bus message: \(error)")
+                if tryAgain {
+                    logger.info("Trying again to fetch the bus schedule")
+                    self.fetchBusMessage(completionHandler: completionHandler, tryAgain: false);
+                } else {
                     completionHandler(nil)
-                    return
                 }
-                // Process HTML into data we care about, the "daily message"
-                let dailyMessage = self.processBusMessage(data: data!)
-                completionHandler(dailyMessage)
-            })
-            task.resume()
-            attempt_count += 1
-        }
+                return
+            }
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                logger.info("Error with the response, unexpected status code: \(String(describing: response))")
+                completionHandler(nil)
+                return
+            }
+            // Process HTML into data we care about, the "daily message"
+            let dailyMessage = self.processBusMessage(data: data!)
+            completionHandler(dailyMessage)
+        })
+        task.resume()
     }
     
     /**
@@ -388,43 +376,37 @@ extension RouteController {
      
      - Returns: calls completion handler with campus alert as argument or returns on error.
      */
-    func fetchCampusAlert(completionHandler: @escaping (Data?) -> Void) {
+    func fetchCampusAlert(completionHandler: @escaping (Data?) -> Void, tryAgain: Bool = true) {
         let url = URL(string: "https://csbsju.edu/")
         // Create request
         let request = URLRequest(url: url!)
-        var attempt_count = 0;
-        var error_occured = false;
-        while (attempt_count == 0 || (attempt_count == 1 && error_occured)) {
-            // Create url session to send request
-            let task = URLSession(configuration:configuration).dataTask(with: request, completionHandler: { (data, response, error) in
-                if let error = error {
-                    error_occured = true;
-                    logger.info("Error fetching campus alert: \(error)")
-                    if attempt_count == 0 {
-                        logger.info("Trying again to fetch the campus alert")
-                        return
-                    } else if attempt_count == 1 {
-                        completionHandler(nil)
-                        return
-                    }
-                }
-                guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode) else {
-                    logger.info("Error with the response, unexpected status code: \(String(describing: response))")
-                    DispatchQueue.main.async {
-                        self.deviceOnlineStatus = "offline"
-                        self.csbsjuApiOnlineStatus = "CsbsjuApi invalid response" // adding this to the campus alert fetch since if csbsju.edu is down the bus api likely is too, for some reason this isn't hit in the fetchCsbsjuApi method during a timeout
-                        
-                    }
+        // Create url session to send request
+        let task = URLSession(configuration:configuration).dataTask(with: request, completionHandler: { (data, response, error) in
+            if let error = error {
+                logger.info("Error fetching campus alert: \(error)")
+                if tryAgain {
+                    logger.info("Trying again to fetch the bus schedule")
+                    self.fetchCampusAlert(completionHandler: completionHandler, tryAgain: false);
+                } else {
                     completionHandler(nil)
-                    return
                 }
-                // Process HTML into data we care about, the "campus alert"
-                completionHandler(data)
-            })
-            task.resume()
-            attempt_count += 1
-        }
+                return
+            }
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                logger.info("Error with the response, unexpected status code: \(String(describing: response))")
+                DispatchQueue.main.async {
+                    self.deviceOnlineStatus = "offline"
+                    self.csbsjuApiOnlineStatus = "CsbsjuApi invalid response" // adding this to the campus alert fetch since if csbsju.edu is down the bus api likely is too, for some reason this isn't hit in the fetchCsbsjuApi method during a timeout
+                    
+                }
+                completionHandler(nil)
+                return
+            }
+            // Process HTML into data we care about, the "campus alert"
+            completionHandler(data)
+        })
+        task.resume()
     }
 
     /**
@@ -473,41 +455,35 @@ extension RouteController {
      
      - Returns: calls completion handler with the API response as argument or returns nill on error.
      */
-    func fetchLinkbusApi(completionHandler: @escaping (LinkbusApi?) -> Void) {
+    func fetchLinkbusApi(completionHandler: @escaping (LinkbusApi?) -> Void, tryAgain: Bool = true) {
         let url = URL(string: LinkbusApiUrl)!
-        var attempt_count = 0;
-        var error_occured = false;
-        while (attempt_count == 0 || (attempt_count == 1 && error_occured)) {
-            let task = URLSession(configuration:configuration).dataTask(with: url, completionHandler: { (data, response, error) in
-                if let error = error {
-                    error_occured = true;
-                    logger.info("Error with fetching bus schedule from Linkbus API: \(error)")
-                    if attempt_count == 0 {
-                        logger.info("Trying again to fetch the Linkbus API")
-                        return
-                    } else if attempt_count == 1 {
-                        completionHandler(nil)
-                        return
-                    }
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode) else {
-                    logger.info("Error with the response, unexpected status code: \(String(describing: response))")
-                    completionHandler(nil)  
-                    return
-                }
-                do {
-                    let apiResponse = try JSONDecoder().decode(LinkbusApi.self, from: data!)
-                    completionHandler(apiResponse)
-                } catch {
-                    logger.info("Error decoding Linkbus API!")
+        let task = URLSession(configuration:configuration).dataTask(with: url, completionHandler: { (data, response, error) in
+            if let error = error {
+                logger.info("Error with fetching bus schedule from Linkbus API: \(error)")
+                if tryAgain {
+                    logger.info("Trying again to fetch the bus schedule")
+                    self.fetchLinkbusApi(completionHandler: completionHandler, tryAgain: false);
+                } else {
                     completionHandler(nil)
                 }
-            })
-            task.resume()
-            attempt_count += 1
-        }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                logger.info("Error with the response, unexpected status code: \(String(describing: response))")
+                completionHandler(nil)
+                return
+            }
+            do {
+                let apiResponse = try JSONDecoder().decode(LinkbusApi.self, from: data!)
+                completionHandler(apiResponse)
+            } catch {
+                logger.info("Error decoding Linkbus API!")
+                completionHandler(nil)
+            }
+        })
+        task.resume()
     }
     
     func processRoutesAndAlerts() {
