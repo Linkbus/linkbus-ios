@@ -123,21 +123,23 @@ extension RouteController {
                     dispatchGroup.leave()
                 }
             }
-            // CSBSJU API (Yesterday's routes)
-            dispatchGroup.enter()
-            fetchCsbsjuApi(completionHandler: { apiResponse in
-                DispatchQueue.main.async {
-                    logger.info("fetchCsbsjuApi finished")
-                    if apiResponse != nil {
-                        self.csbsjuApiResponseYesterday = apiResponse!
-                        self.csbsjuApiOnlineStatus = "online"
-                    } else {
-                        self.csbsjuApiOnlineStatus = "CsbsjuApi invalid response"
+            if !self.dateIsChanged {
+                // CSBSJU API (Yesterday's routes)
+                dispatchGroup.enter()
+                fetchCsbsjuApi(completionHandler: { apiResponse in
+                    DispatchQueue.main.async {
+                        logger.info("fetchCsbsjuApi finished")
+                        if apiResponse != nil {
+                            self.csbsjuApiResponseYesterday = apiResponse!
+                            self.csbsjuApiOnlineStatus = "online"
+                        } else {
+                            self.csbsjuApiOnlineStatus = "CsbsjuApi invalid response"
+                        }
+                        logger.info("fetchCsbsjuApi for yesterday took \(NSDate().timeIntervalSince1970 - startTime) seconds")
+                        dispatchGroup.leave()
                     }
-                    logger.info("fetchCsbsjuApi for yesterday took \(NSDate().timeIntervalSince1970 - startTime) seconds")
-                    dispatchGroup.leave()
-                }
-            }, yesterdaysRoutes: true)
+                }, yesterdaysRoutes: true)
+            }
             
             // Daily message alert
             // Website does not always have a message
