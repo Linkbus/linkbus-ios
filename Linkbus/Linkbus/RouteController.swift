@@ -223,6 +223,7 @@ extension RouteController {
                     logger.info("Error with fetching bus schedule from CSBSJU API: \(error)")
                     if attempt_count == 0 {
                         logger.info("Trying again to fetch the bus schedule")
+                        return
                     } else if attempt_count == 1 {
                         DispatchQueue.main.async {
                             self.localizedDescription = error.localizedDescription
@@ -316,6 +317,7 @@ extension RouteController {
                     logger.info("Error with fetching daily message: \(error)")
                     if attempt_count == 0 {
                         logger.info("Trying again to fetch the daily message")
+                        return
                     } else if attempt_count == 1 {
                         completionHandler(nil)
                         return
@@ -400,6 +402,7 @@ extension RouteController {
                     logger.info("Error fetching campus alert: \(error)")
                     if attempt_count == 0 {
                         logger.info("Trying again to fetch the campus alert")
+                        return
                     } else if attempt_count == 1 {
                         completionHandler(nil)
                         return
@@ -481,6 +484,7 @@ extension RouteController {
                     logger.info("Error with fetching bus schedule from Linkbus API: \(error)")
                     if attempt_count == 0 {
                         logger.info("Trying again to fetch the Linkbus API")
+                        return
                     } else if attempt_count == 1 {
                         completionHandler(nil)
                         return
@@ -582,8 +586,8 @@ extension RouteController {
                     var i = 0;
                     for message in self.busMessages {
                         logger.info("addSchoolMessageAlerts(): Message \(i+1): \(message)")
-                        // Make sure the message has a length greater than 5 and less than 70
-                        if message.count > 10 && message.count < 70 {
+                        // Make sure the message has a length greater than 5 and less than 500
+                        if message.count > 10 && message.count < 500 {
                             // Create alert using website settings
 //                            logger.info(busMessageSettings.id)
 //                            logger.info(busMessageSettings.order)
@@ -593,7 +597,7 @@ extension RouteController {
                                                       rgb: busMessageSettings.rgb, order: (self.busMessages.count - 1))
                             refreshedLbBusSchedule.alerts.append(dailyMessageAlert)
                         } else {
-                            logger.info("Bed bus message: \(message)")
+                            logger.info("Bad bus message: \(message)")
                         }
                         i += 1;
                     }
