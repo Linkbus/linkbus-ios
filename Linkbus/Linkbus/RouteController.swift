@@ -385,7 +385,7 @@ extension RouteController {
             if let error = error {
                 logger.info("Error fetching campus alert: \(error)")
                 if tryAgain {
-                    logger.info("Trying again to fetch the bus schedule")
+                    logger.info("Trying again to fetch the campus alert")
                     self.fetchCampusAlert(completionHandler: completionHandler, tryAgain: false);
                 } else {
                     completionHandler(nil)
@@ -459,9 +459,9 @@ extension RouteController {
         let url = URL(string: LinkbusApiUrl)!
         let task = URLSession(configuration:configuration).dataTask(with: url, completionHandler: { (data, response, error) in
             if let error = error {
-                logger.info("Error with fetching bus schedule from Linkbus API: \(error)")
+                logger.info("Error with fetching the Linkbus API: \(error)")
                 if tryAgain {
-                    logger.info("Trying again to fetch the bus schedule")
+                    logger.info("Trying again to fetch the Linkbus API")
                     self.fetchLinkbusApi(completionHandler: completionHandler, tryAgain: false);
                 } else {
                     completionHandler(nil)
