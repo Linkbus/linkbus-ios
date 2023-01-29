@@ -333,7 +333,7 @@ func autoRefreshData(self: Home) {
         logger.info("Refreshing data")
         logger.info("Times changed: \(self.lastRefreshTimeString) != \(currentTime)")
         
-        self.routeController.webRequest()
+        self.routeController.updateRoutesAndAlerts()
             // Wait for web request to finish
             .notify(queue: .main) {
                 logger.info("webRequest finished")

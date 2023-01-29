@@ -10,6 +10,7 @@ import SwiftUI
 import SwiftSoup
 import Logging
 import FirebaseAnalytics
+import Alamofire
 
 private let logger = Logger(label: "com.michaelcarroll.Linkbus.RouteController")
 
@@ -52,9 +53,13 @@ class RouteController: ObservableObject {
 
 extension RouteController {
     /**
+     Public methods
+     */
+
+    /**
      Changes the selected date. Called when the date is changed on the select date view.
      */
-    func changeDate(selectedDate: Date) {
+    public func changeDate(selectedDate: Date) {
         let isSelectedDateToday = Calendar.current.isDateInToday(selectedDate)
         logger.info("Changing date to \(selectedDate)")
         Analytics.logEvent("ChangedDate", parameters: ["date": selectedDate, "is_current_date": isSelectedDateToday])
@@ -71,7 +76,7 @@ extension RouteController {
     /**
      Resets routes and loads todays routes
      */
-    func resetDate() {
+    public func resetDate() {
         if self.dateIsChanged {
             logger.info("Resetting date back to today")
             dateIsChanged = false
@@ -82,7 +87,37 @@ extension RouteController {
         }
     }
     
-    func webRequest() -> DispatchGroup {
+    public func updateRoutesAndAlerts() -> DispatchGroup {
+        return webRequest()
+    }
+    
+    /**
+     Private methods
+     */
+    
+    private func getCsbusjuApiUrl(yesterdaysRoutes: Bool = false) -> String {
+        var urlString = CsbsjuApiUrl
+        // Format date object into string e.g. 10/23/20
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        var formattedDate = ""
+        if self.dateIsChanged {
+            formattedDate = formatter.string(from: self.selectedDate)
+        } else if yesterdaysRoutes {
+            let yesterdaysDate = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+            formattedDate = formatter.string(from: yesterdaysDate)
+        }
+        // Add date to URL
+        urlString += "?date=" + formattedDate
+        logger.info("Linkbus API URL: \(urlString)")
+        return urlString
+    }
+    
+    /**
+     Web request methods
+     */
+    
+    private func webRequest() -> DispatchGroup {
         let dispatchGroup = DispatchGroup()
         if webRequestInProgress == false {
             let startTime = NSDate().timeIntervalSince1970
@@ -110,7 +145,7 @@ extension RouteController {
             
             // CSBSJU API
             dispatchGroup.enter()
-            fetchCsbsjuApi { apiResponse in
+            fetchCsbsjuApi(completionHandler: { apiResponse in
                 DispatchQueue.main.async {
                     logger.info("fetchCsbsjuApi finished")
                     if apiResponse != nil {
@@ -122,11 +157,11 @@ extension RouteController {
                     logger.info("fetchCsbsjuApi took \(NSDate().timeIntervalSince1970 - startTime) seconds")
                     dispatchGroup.leave()
                 }
-            }
+            }, apiUrl: getCsbusjuApiUrl(yesterdaysRoutes: false))
             if !self.dateIsChanged {
                 // CSBSJU API (Yesterday's routes)
                 dispatchGroup.enter()
-                fetchCsbsjuApi(completionHandler: { apiResponse in
+                fetchCsbsjuApi(completionHandler: { apiResponse  in
                     DispatchQueue.main.async {
                         logger.info("fetchCsbsjuApi finished")
                         if apiResponse != nil {
@@ -138,7 +173,7 @@ extension RouteController {
                         logger.info("fetchCsbsjuApi for yesterday took \(NSDate().timeIntervalSince1970 - startTime) seconds")
                         dispatchGroup.leave()
                     }
-                }, yesterdaysRoutes: true)
+                }, apiUrl: getCsbusjuApiUrl(yesterdaysRoutes: true))
             }
             
             // Daily message alert
@@ -194,67 +229,76 @@ extension RouteController {
         return dispatchGroup
     }
     
-    func fetchCsbsjuApi(completionHandler: @escaping (BusSchedule?) -> Void, yesterdaysRoutes: Bool = false) {
-        var urlString = CsbsjuApiUrl
-        if self.dateIsChanged {
-            // Format date object into string e.g. 10/23/20
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            let formattedDate = formatter.string(from: self.selectedDate)
-            // Add date to URL
-            urlString += "?date=" + formattedDate
-        } else if yesterdaysRoutes {
-            let yesterdaysDate = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            let formattedDate = formatter.string(from: yesterdaysDate)
-            // Add date to URL
-            urlString += "?date=" + formattedDate
-        }
-        logger.info("Linkbus API URL: \(urlString)")
-        let url = URL(string: urlString)!
-
-        let task = URLSession(configuration:configuration).dataTask(with: url, completionHandler: { data, response, error in
-            if let error = error {
+    private func fetchCsbsjuApi(completionHandler: @escaping (BusSchedule?) -> Void, apiUrl: String) {
+        
+        AF.request(apiUrl).responseDecodable(of: BusSchedule.self) { response in
+            if response.error != nil {
+                // async update UI
                 DispatchQueue.main.async {
-                    self.localizedDescription = error.localizedDescription
+                    self.localizedDescription = response.debugDescription
                     logger.info("Localized desc: \(self.localizedDescription)")
                     self.deviceOnlineStatus = "offline"
                     self.webRequestInProgress = false
                     self.webRequestIsSlow = false
                 }
-                logger.info("Error with fetching bus schedule from CSBSJU API: \(error)")
+                logger.info("Error with fetching bus schedule from CSBSJU API: \(response.debugDescription)")
                 completionHandler(nil)
                 return
             }
-            else {
-                DispatchQueue.main.async {
-                    print("deviceOnlineStatus: " + self.deviceOnlineStatus)
-                    if self.deviceOnlineStatus == "offline" {
-                        self.deviceOnlineStatus = "back online"
-                    }
-                    self.localizedDescription = "no error"
+            logger.info("deviceOnlineStatus: \(self.deviceOnlineStatus)")
+            DispatchQueue.main.async {
+                if self.deviceOnlineStatus == "offline" {
+                    self.deviceOnlineStatus = "back online"
                 }
+                self.localizedDescription = "no error"
             }
-            
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                logger.info("Error with the response, unexpected status code: \(String(describing: response))")
-                DispatchQueue.main.async {
-                    self.csbsjuApiOnlineStatus = "CsbsjuApi invalid response"
-                }
-                completionHandler(nil)
-                return
-            }
-            do {
-                let apiResponse = try JSONDecoder().decode(BusSchedule.self, from: data!)
-                completionHandler(apiResponse)
-            } catch {
-                logger.info("Error decoding CSB/SJU API!")
-                completionHandler(nil)
-            }
-        })
-        task.resume()
+            completionHandler(response.value)
+        }
+        
+        
+//        let url = URL(string: urlString)!
+//
+//        let task = URLSession(configuration:configuration).dataTask(with: url, completionHandler: { data, response, error in
+//            if let error = error {
+//                DispatchQueue.main.async {
+//                    self.localizedDescription = error.localizedDescription
+//                    logger.info("Localized desc: \(self.localizedDescription)")
+//                    self.deviceOnlineStatus = "offline"
+//                    self.webRequestInProgress = false
+//                    self.webRequestIsSlow = false
+//                }
+//                logger.info("Error with fetching bus schedule from CSBSJU API: \(error)")
+//                completionHandler(nil)
+//                return
+//            }
+//            else {
+//                DispatchQueue.main.async {
+//                    print("deviceOnlineStatus: " + self.deviceOnlineStatus)
+//                    if self.deviceOnlineStatus == "offline" {
+//                        self.deviceOnlineStatus = "back online"
+//                    }
+//                    self.localizedDescription = "no error"
+//                }
+//            }
+//
+//            guard let httpResponse = response as? HTTPURLResponse,
+//                  (200...299).contains(httpResponse.statusCode) else {
+//                logger.info("Error with the response, unexpected status code: \(String(describing: response))")
+//                DispatchQueue.main.async {
+//                    self.csbsjuApiOnlineStatus = "CsbsjuApi invalid response"
+//                }
+//                completionHandler(nil)
+//                return
+//            }
+//            do {
+//                let apiResponse = try JSONDecoder().decode(BusSchedule.self, from: data!)
+//                completionHandler(apiResponse)
+//            } catch {
+//                logger.info("Error decoding CSB/SJU API!")
+//                completionHandler(nil)
+//            }
+//        })
+//        task.resume()
     }
     
     /**
@@ -264,7 +308,7 @@ extension RouteController {
      
      - Returns: calls completion handler with bus message as argument or returns nill on error.
      */
-    func fetchBusMessage(completionHandler: @escaping ([String]?) -> Void) {
+    private func fetchBusMessage(completionHandler: @escaping ([String]?) -> Void) {
         let url = URL(string: "https://apps.csbsju.edu/busschedule/default.aspx")
         // Create request
         var request = URLRequest(url: url!)
@@ -322,7 +366,7 @@ extension RouteController {
      
      - Returns: Bus message string or empty string.
      */
-    func processBusMessage(data: Data) -> [String] {
+    private func processBusMessage(data: Data) -> [String] {
         // Use regex to parse HTML for daily message within p tag
 //        logger.info("processBusMessage")
 //        logger.info(data)
@@ -366,7 +410,7 @@ extension RouteController {
      
      - Returns: calls completion handler with campus alert as argument or returns on error.
      */
-    func fetchCampusAlert(completionHandler: @escaping (Data?) -> Void) {
+    private func fetchCampusAlert(completionHandler: @escaping (Data?) -> Void) {
         let url = URL(string: "https://csbsju.edu/")
         // Create request
         let request = URLRequest(url: url!)
@@ -398,7 +442,7 @@ extension RouteController {
      Processes the csbaju.com html into the campus alert text and link strings.
      - Parameter data: The fetched bus schedule website HTML.
      */
-    func processCampusAlert(data: Data) -> Void {
+    private func processCampusAlert(data: Data) -> Void {
         // Use regex to parse HTML
         let dataString = String(decoding: data, as: UTF8.self)
         let pattern = #"CampusAlert"><h5>(?><a href="([^"]+?)"[^>]*?>([^<]+?)<|([^<]+?)<)"#
@@ -440,7 +484,7 @@ extension RouteController {
      
      - Returns: calls completion handler with the API response as argument or returns nill on error.
      */
-    func fetchLinkbusApi(completionHandler: @escaping (LinkbusApi?) -> Void) {
+    private func fetchLinkbusApi(completionHandler: @escaping (LinkbusApi?) -> Void) {
         let url = URL(string: LinkbusApiUrl)!
 
         let task = URLSession(configuration:configuration).dataTask(with: url, completionHandler: { (data, response, error) in
@@ -467,7 +511,7 @@ extension RouteController {
         task.resume()
     }
     
-    func processRoutesAndAlerts() {
+    private func processRoutesAndAlerts() {
         //logger.info(apiBusSchedule.routes?.count)
         //let busSchedule = BusSchedule(msg: apiBusSchedule.msg!, attention: apiBusSchedule.attention!, routes: apiBusSchedule.routes!)
         
@@ -511,7 +555,7 @@ extension RouteController {
     /**
      Creates all the alerts
      */
-    func processAlerts() {
+    private func processAlerts() {
 //        logger.info("processAlerts")
         for apiAlert in linkbusApiResponse.alerts {
             if (apiAlert.active) {
@@ -529,7 +573,7 @@ extension RouteController {
     /**
      Creates alerts out of the campus alert and bus message if they are valid.
      */
-    func addSchoolMessageAlerts() {
+    private func addSchoolMessageAlerts() {
         if linkbusApiResponse.schoolAlertsSettings.count == 2 {
             // Create alert from bus message
             // Only add alert if message is not empty string and is valid
@@ -594,7 +638,7 @@ extension RouteController {
     /**
      Creates all the routes from CSB/SJU API
      */
-    func processRoutes() {
+    private func processRoutes() {
 //        logger.info("processRoutes")
         if (!csbsjuApiResponse.routes!.isEmpty) {
 //            logger.info("ROUTES:")

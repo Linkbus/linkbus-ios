@@ -77,7 +77,7 @@ struct AlertCard: View {
             else {
                 Button(action: {
                     if (action == "webRequest") {
-                        self.routeController.webRequest()
+                        self.routeController.updateRoutesAndAlerts()
                     }
                     else if (action == "resetDate") {
                         self.routeController.resetDate()

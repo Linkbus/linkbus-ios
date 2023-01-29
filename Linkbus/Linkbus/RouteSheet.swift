@@ -7,6 +7,21 @@
 //
 
 import SwiftUI
+import MapKit
+
+//struct MapView: UIViewRepresentable {
+//    func makeUIView(context: Context) -> MKMapView {
+//        MKMapView(frame: .zero)
+//    }
+//
+//    func updateUIView(_ view: MKMapView, context: Context) {
+//        let coordinate = CLLocationCoordinate2D(
+//            latitude: 34.011286, longitude: -116.166868)
+//        let span = MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+//        let region = MKCoordinateRegion(center: coordinate, span: span)
+//        view.setRegion(region, animated: true)
+//    }
+//}
 
 struct RouteSheet: View {
     @Environment(\.presentationMode) var presentationMode
@@ -17,6 +32,7 @@ struct RouteSheet: View {
         = CGFloat.infinity   // << variant for VStack
     
     @ObservedObject var routeController: RouteController
+//    var coord: CLLocationCoordinate2D
     
     init(route:LbRoute, routeController: RouteController) {
         self.route = route
@@ -29,10 +45,12 @@ struct RouteSheet: View {
         UINavigationBar.appearance().backgroundColor = .clear
         
         self.routeController = routeController
+
+//        self.coord = CLLocationCoordinate2D(latitude: 45.5606, longitude: -94.3221)
     }
     
     var body: some View {
-        NavigationView {
+//        NavigationView {
             VStack() {
                 RoundedRectangle(cornerRadius: CGFloat(5.0) / 2.0)
                     .frame(width: 60, height: 4)
@@ -40,7 +58,7 @@ struct RouteSheet: View {
                     .padding([.top], 10)
                     .padding([.bottom], 5)
                 
-                ScrollView {
+//                VStack {
                     
                     VStack(alignment: .leading) {
                         
@@ -127,101 +145,184 @@ struct RouteSheet: View {
                     .padding(12)
                     
                     
-                    Spacer()
-                    
-                    
-                    
-                    //Spacer()
-                    
-                    VStack(alignment: .leading) {
+    
                         
+                    
+                    
+//                    VStack(alignment: .leading) {
+//                        Divider().foregroundColor(Color.green)//.background(Color(UIColor.systemGray2))
+//                        ForEach(route.times, id: \.self) { time in
+//
+//                            Text(time.timeString)
+//                                .font(Font.custom("HelveticaNeue", size: 16))
+////                                .padding([.leading], 6)
+//
+////                            Spacer()
+//                            Divider().background(Color(UIColor.systemGray2))
+//
+//                        }
+//                    }
+//                    .transition(.slide)
+//                    .padding([.leading, .trailing], 26)
+//                    .padding([.top], 5)
+                    
+                    
+                    
+                    
+                    
                         // route times
-                        HStack(alignment: .lastTextBaseline) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                ForEach(route.times, id: \.self) { time in
-                                    HStack {
-                                        if (route.nextBusTimer == "Departing now" && time.current) {
-                                            Text(time.timeString)
-                                                .font(Font.custom("HelveticaNeue", size: 12))
-                                                .padding([.leading, .trailing], 10)
-                                                .padding([.top, .bottom], 5)
-                                                .foregroundColor(Color.white)
-                                                //.background(Color(red: 43/255, green: 175/255, blue: 187/255))
-                                                .background(Color.red)
-                                                .cornerRadius(7)
-                                                .padding([.bottom], 5)
-                                        }
-                                        else if (route.nextBusTimer.contains("Now") && time.current) {
-                                            Text(time.timeString)
-                                                .font(Font.custom("HelveticaNeue", size: 12))
-                                                .padding([.leading, .trailing], 10)
-                                                .padding([.top, .bottom], 5)
-                                                .foregroundColor(Color.white)
-                                                //.background(Color(red: 43/255, green: 175/255, blue: 187/255))
-                                                .background(Color.green)
-                                                .cornerRadius(7)
-                                                .padding([.bottom], 5)
-                                        }
-                                        else if (routeController.localizedDescription == "The Internet connection appears to be offline.") ||
-                                                    (routeController.csbsjuApiOnlineStatus == "CsbsjuApi invalid response") {
-                                            Text(time.timeString)
-                                                .font(Font.custom("HelveticaNeue", size: 12))
-                                                .padding([.leading, .trailing], 10)
-                                                .padding([.top, .bottom], 5)
-                                                .foregroundColor(Color.white)
-                                                //.background(Color(red: 43/255, green: 175/255, blue: 187/255))
-                                                .background(Color.gray)
-                                                .cornerRadius(7)
-                                                .padding([.bottom], 5)
-                                        }
-                                        else {
-                                            Text(time.timeString)
-                                                .font(Font.custom("HelveticaNeue", size: 12))
-                                                .padding([.leading, .trailing], 10)
-                                                .padding([.top, .bottom], 5)
-                                                .foregroundColor(Color.white)
-                                                //.background(Color(red: 43/255, green: 175/255, blue: 187/255))
-                                                .background(Color.blue)
-                                                .cornerRadius(7)
-                                                .padding([.bottom], 5)
-                                        }
-                                        Spacer()
+//                        HStack(alignment: .lastTextBaseline) {
+//                            VStack(alignment: .leading, spacing: 0) {
+//                                ForEach(route.times, id: \.self) { time in
+//                                    HStack {
+//                                        if (route.nextBusTimer == "Departing now" && time.current) {
+//                                            Text(time.timeString)
+//                                                .font(Font.custom("HelveticaNeue", size: 12))
+//                                                .padding([.leading, .trailing], 10)
+//                                                .padding([.top, .bottom], 5)
+//                                                .foregroundColor(Color.white)
+//                                                //.background(Color(red: 43/255, green: 175/255, blue: 187/255))
+//                                                .background(Color.red)
+//                                                .cornerRadius(7)
+//                                                .padding([.bottom], 5)
+//                                        }
+//                                        else if (route.nextBusTimer.contains("Now") && time.current) {
+//                                            Text(time.timeString)
+//                                                .font(Font.custom("HelveticaNeue", size: 12))
+//                                                .padding([.leading, .trailing], 10)
+//                                                .padding([.top, .bottom], 5)
+//                                                .foregroundColor(Color.white)
+//                                                //.background(Color(red: 43/255, green: 175/255, blue: 187/255))
+//                                                .background(Color.green)
+//                                                .cornerRadius(7)
+//                                                .padding([.bottom], 5)
+//                                        }
+//                                        else if (routeController.localizedDescription == "The Internet connection appears to be offline.") ||
+//                                                    (routeController.csbsjuApiOnlineStatus == "CsbsjuApi invalid response") {
+//                                            Text(time.timeString)
+//                                                .font(Font.custom("HelveticaNeue", size: 12))
+//                                                .padding([.leading, .trailing], 10)
+//                                                .padding([.top, .bottom], 5)
+//                                                .foregroundColor(Color.white)
+//                                                //.background(Color(red: 43/255, green: 175/255, blue: 187/255))
+//                                                .background(Color.gray)
+//                                                .cornerRadius(7)
+//                                                .padding([.bottom], 5)
+//                                        }
+//                                        else {
+//                                            Text(time.timeString)
+//                                                .font(Font.custom("HelveticaNeue", size: 16))
+////                                                .padding([.leading, .trailing], 10)
+////                                                .padding([.top, .bottom], 5)
+////                                                .foregroundColor(Color.white)
+////                                                //.background(Color(red: 43/255, green: 175/255, blue: 187/255))
+////                                                .background(Color.blue)
+////                                                .cornerRadius(7)
+////                                                .padding([.bottom], 5)
+//                                        }
+//                                        Spacer()
+//
+//                                    }
+//                                    Divider().background(Color.gray)
+//                                }
+////                                Button(action: { }, label: {
+////                                    Text("View tomorrow's schedule")
+////                                        .foregroundColor(.white)
+////                                        .padding(12)
+////                                        .font(Font.custom("HelveticaNeue", size: 14))
+////                                        .frame(alignment: .leading)
+////                                        .background(Color.green)
+////                                        .cornerRadius(15)
+////                                })
+//                            }
+//                            .buttonStyle(PlainButtonStyle())
+//                            .padding(12)
+//                            .padding(.leading)
+//                        }
+//                        .padding(.leading)
+//                        .padding([.bottom], 5)
+//                        .transition(.opacity)
+                        
+                        
+                        
+//                    }
+//                    .transition(.slide)
+//                    MapView(coordinate: self.coord).edgesIgnoringSafeArea(.all)
+//                }
+//                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+//                .navigationBarTitle("", displayMode: .inline)
+//                .navigationBarHidden(true)
+                
+                
+                
+                
+                
+//                VStack(alignment: .leading) {
+                    ZStack {
+
+                        MapView(route: self.route)
+                            .edgesIgnoringSafeArea(.all)
+
+                        HStack(alignment: .top) {
+                            VStack {
+                                Text("Pickup Times")
+                                    .font(Font.custom("HelveticaNeue", size: 16))
+                                    .foregroundColor(Color.blue)
+                                    .bold()
+//                                    .shadow(color: Color.white, radius: 1, x: 1, y: 1)
+
+                                ScrollView(showsIndicators: false) {
+                                    ForEach(route.times, id: \.self) { time in
+                                        Text(time.timeString)
+                                            .font(Font.custom("HelveticaNeue", size: 16))
+                                            .padding([.leading, .trailing], 10)
+                                            .padding([.top, .bottom], 5)
+                                            .foregroundColor(Color(red: 0.23, green: 0.23, blue:0.23))
+                                            .background(Color.white)
+                                            .cornerRadius(7)
+                                            .padding([.bottom], 4)
+//                                            .shadow(color: Color.black, radius: 1, x: 0, y: 1)
                                     }
+                                    .padding([.leading, .trailing], 12)
                                 }
-//                                Button(action: { }, label: {
-//                                    Text("View tomorrow's schedule")
-//                                        .foregroundColor(.white)
-//                                        .padding(12)
-//                                        .font(Font.custom("HelveticaNeue", size: 14))
-//                                        .frame(alignment: .leading)
-//                                        .background(Color.green)
-//                                        .cornerRadius(15)
-//                                })
                             }
-                            .buttonStyle(PlainButtonStyle())
-                            .padding(12)
-                            .padding(.leading)
+//                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            Spacer()
                         }
-                        .padding(.leading)
-                        .padding([.bottom], 5)
-                        .transition(.opacity)
-                        
-                        
-                        
+                        .padding([.top, .bottom], 15)
+                            
+                            
+                            // .background(Color.green)
                     }
-                    .transition(.slide)
-                    
-                }
+                
+//                    }.background(Color.red)
+//                }.background(Color.yellow)
                 
                 
-                .navigationBarTitle("", displayMode: .inline)
-                .navigationBarHidden(true)
                 
-            }
+                
+                
+                
+                
+//                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+//
+//            }
+//            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+//            Spacer()
+            
+            
+            
+
+            
             //.background(Color(UIColor.systemGroupedBackground)).edgesIgnoringSafeArea(.all)
-        }
+            }
+//            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         
+//                        .navigationBarTitle("", displayMode: .inline)
+//                        .navigationBarHidden(true)
+//        Spacer()
     }
+    
 }
 
 

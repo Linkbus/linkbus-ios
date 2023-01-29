@@ -53,7 +53,7 @@ struct RouteCard: View {
                     VStack (alignment: .leading, spacing: 0) {
                         HStack(alignment: .center) {
                             Spacer()
-                            Text("Next bus")
+                            Text(routeController.dateIsChanged ? "First bus" : "Next bus")
                                 .font(Font.custom("HelveticaNeue", size: 12))
                                 //.font(.subheadline)
                                 //.fontWeight(.regular)
