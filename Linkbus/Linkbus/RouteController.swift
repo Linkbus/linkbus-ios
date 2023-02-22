@@ -156,21 +156,21 @@ extension RouteController {
             }
             
             // Campus alert
-            if !dateIsChanged {
-                dispatchGroup.enter()
-                fetchCampusAlert { response in
-                    DispatchQueue.main.async {
-                        logger.info("fetchCampusAlert finished")
-                        if response != nil {
-                            self.processCampusAlert(data: response!)
-                        }
-                        logger.info("fetchCampusAlert took \(NSDate().timeIntervalSince1970 - startTime) seconds")
-                        dispatchGroup.leave()
-                    }
-                }
-            } else {
-                logger.debug("Not fetching campus alert because date is changed")
-            }
+//            if !dateIsChanged {
+//                dispatchGroup.enter()
+//                fetchCampusAlert { response in
+//                    DispatchQueue.main.async {
+//                        logger.info("fetchCampusAlert finished")
+//                        if response != nil {
+//                            self.processCampusAlert(data: response!)
+//                        }
+//                        logger.info("fetchCampusAlert took \(NSDate().timeIntervalSince1970 - startTime) seconds")
+//                        dispatchGroup.leave()
+//                    }
+//                }
+//            } else {
+//                logger.debug("Not fetching campus alert because date is changed")
+//            }
             
             // Linkbus API that connects to website
             dispatchGroup.enter()
