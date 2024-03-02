@@ -51,6 +51,10 @@
 
  ---
 
+Install dependencies:
+`brew install cocoapods`
+from /linkbus-ios/linkbus:
+`pod install`
 
 
 [iOS] Bus schedule application for the CSB/SJU campuses.
